@@ -239,6 +239,7 @@ function fantasyMap() {
   // Changelog dialog window
   const storedVersion = localStorage.getItem("version"); // show message on load
   if (storedVersion != version) {
+    /*
     alertMessage.innerHTML = `<b>2018-10-18</b>:
       The <i>Fantasy Map Generator</i> is updated up to version <b>${version}</b>.
       Main changes:<br><br>
@@ -264,6 +265,7 @@ function fantasyMap() {
       },
       position: {my: "center", at: "center", of: "svg"}
     });
+    */
   }
 
   getSeed(); // get and set random generator seed
@@ -6842,14 +6844,13 @@ function fantasyMap() {
     uploadFile(fileToLoad);
   });
 
-  function loadMap(mapAsString) {
-    const dataLoaded = mapAsString;
+  function loadMap(dataString) {
+    const data = dataString.split("\r\n");
+    //const dataLoaded = mapAsString;
     // data convention: 0 - params; 1 - all points; 2 - cells; 3 - manors; 4 - states;
     // 5 - svg; 6 - options; 7 - cultures; 8 - none; 9 - none; 10 - heights; 11 - notes;
-    const data = mapAsString.split("\n");
-    console.log(data.length);
+    //const data = dataLoaded.split("\r\n");
     const mapVersion = data[0].split("|")[0] || data[0];
-    console.log(mapVersion);
     if (mapVersion === version) {loadDataFromMap(data);}
     else {
       let message = ``, load = false;
@@ -6881,7 +6882,7 @@ function fantasyMap() {
     console.time("loadMap");
     const fileReader = new FileReader();
     fileReader.onload = function(fileLoadedEvent) {
-      loadMap(fileLoadedEvent.target.result)
+      loadMap(fileLoadedEvent.target.result);
     };
     fileReader.readAsText(file, "UTF-8");
     if (callback) {callback();}
@@ -6895,7 +6896,7 @@ function fantasyMap() {
       seed = params[3];
       optionsSeed.value = seed;
     }
-    console.log(data.length);
+
     // get options
     if (!data[6]) throw new Error("Cannot load the options, check the .map file!");
     const options = data[6].split("|");
@@ -6929,6 +6930,18 @@ function fantasyMap() {
     svg.attr("width", svgWidth).attr("height", svgHeight);
     if (nWidth === svgWidth && nHeight === svgHeight) applyLoadedData(data);
     else {
+      applyLoadedData(data);
+      // rescale loaded map
+      const xRatio = svgWidth / nWidth;
+      const yRatio = svgHeight / nHeight;
+      const scaleTo = rn(Math.min(xRatio, yRatio), 4);
+      // calculate frames to scretch ocean background
+      const extent = (100 / scaleTo) + "%";
+      const xShift = (nWidth * scaleTo - svgWidth) / 2 / scaleTo;
+      const yShift = (nHeight * scaleTo - svgHeight) / 2 / scaleTo;
+      svg.select("#ocean").selectAll("rect").attr("x", xShift).attr("y", yShift).attr("width", extent).attr("height", extent);
+      zoom.translateExtent([[0, 0],[nWidth, nHeight]]).scaleExtent([scaleTo, 20]).scaleTo(svg, scaleTo);
+      /*
       const m = `The loaded map has size ${nWidth} x ${nHeight} pixels, while the current canvas size is ${svgWidth} x ${svgHeight} pixels.
                  Click "Rescale" to fit the map to the current canvas size. Click "OK" to browse the map without rescaling`;
       alertMessage.innerHTML  = m;
@@ -6955,6 +6968,7 @@ function fantasyMap() {
           }
         }
       });
+      */
     }
   }
 
@@ -10533,16 +10547,9 @@ function fantasyMap() {
     });
   }
 
-  function init() {
-    //loadMap(window.map);
-    closeDialogs();
-  }
-
-  init();
-  window.loadMap = loadMap;
-  if (window.initFirstLoad) {
-    window.initFirstLoad(loadMap);
-  }
+  const map64 = window.map64;
+  loadMap(atob(map64));
+  closeDialogs();
 }
 
 function tip(tip, main, error) {
