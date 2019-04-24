@@ -10546,11 +10546,14 @@ function fantasyMap() {
       });
     });
   }
+
   window.loadMap = loadMap;
-  fetch('rugby.map').then(data => data.text()).then(map => {
+  fetch('rugby.txt').then(data => data.text()).then(map => {
     window.loadMap(map);
     closeDialogs();
   });
+
+  //loadMap(atob(map64));
 }
 
 function tip(tip, main, error) {
