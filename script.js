@@ -10546,10 +10546,11 @@ function fantasyMap() {
       });
     });
   }
-
-  const map64 = window.map64;
-  loadMap(atob(map64));
-  closeDialogs();
+  window.loadMap = loadMap;
+  fetch('rugby.map').then(data => data.text()).then(map => {
+    window.loadMap(map);
+    closeDialogs();
+  });
 }
 
 function tip(tip, main, error) {
