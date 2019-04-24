@@ -6845,7 +6845,7 @@ function fantasyMap() {
   });
 
   function loadMap(dataString) {
-    const data = dataString.split("\n");
+    const data = dataString.split("\r\n");
     //const dataLoaded = mapAsString;
     // data convention: 0 - params; 1 - all points; 2 - cells; 3 - manors; 4 - states;
     // 5 - svg; 6 - options; 7 - cultures; 8 - none; 9 - none; 10 - heights; 11 - notes;
