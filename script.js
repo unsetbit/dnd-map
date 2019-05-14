@@ -1,6 +1,7 @@
 // Fantasy Map Generator main script
-// MIT License. Author: Azgaar (maxganiev@yandex.com). Minsk, 2017-2018
+// Azgaar (maxganiev@yandex.com). Minsk, 2017-2018
 // https://github.com/Azgaar/Fantasy-Map-Generator
+// GNU General Public License v3.0
 
 // To programmers:
   // I don't mind of any help with programming
@@ -239,7 +240,6 @@ function fantasyMap() {
   // Changelog dialog window
   const storedVersion = localStorage.getItem("version"); // show message on load
   if (storedVersion != version) {
-    /*
     alertMessage.innerHTML = `<b>2018-10-18</b>:
       The <i>Fantasy Map Generator</i> is updated up to version <b>${version}</b>.
       Main changes:<br><br>
@@ -265,7 +265,6 @@ function fantasyMap() {
       },
       position: {my: "center", at: "center", of: "svg"}
     });
-    */
   }
 
   getSeed(); // get and set random generator seed
@@ -2457,10 +2456,8 @@ function fantasyMap() {
       }
       let group = this.value.toLowerCase().replace(/ /g, "_").replace(/[^\w\s]/gi, "");
       if (Number.isFinite(+group.charAt(0))) group = "g" + group;
-      if (d3.selectAll("#"+group).size()) {
-        tip("Element with this id already exists. Please provide a unique name");
-        return;
-      }
+      // if el with this id exists, add size to id
+      while (labels.selectAll("#"+group).size()) {group += "_new";}
       createNewLabelGroup(group);
     });
 
@@ -3156,26 +3153,26 @@ function fantasyMap() {
     function completeNewRoute() {
       $("#routeNew, #addRoute").removeClass('pressed');
       restoreDefaultEvents();
-      tip("", true);
-
-      const newRoute = d3.select("#routes [data-route='new']");
-      if (!newRoute.size()) return;
-
-      if (elSelected && elSelected.attr("id") === newRoute.attr("id")) routeRedraw();
-      newRoute.attr("data-route", "");
-      const node = newRoute.node();
-      const l = node.getTotalLength();
-      let pathCells = [];
-      for (let i = 0; i <= l; i ++) {
-        const p = node.getPointAtLength(i);
-        const cell = diagram.find(p.x, p.y).index;
-        pathCells.push(cell);
+      if (!elSelected.size()) return;
+      if (elSelected.attr("data-route") === "new") {
+        routeRedraw();
+        elSelected.attr("data-route", "");
+        const node = elSelected.node();
+        const l = node.getTotalLength();
+        let pathCells = [];
+        for (let i = 0; i <= l; i ++) {
+          const p = node.getPointAtLength(i);
+          const cell = diagram.find(p.x, p.y);
+          if (!cell) {return;}
+          pathCells.push(cell.index);
+        }
+        const uniqueCells = [...new Set(pathCells)];
+        uniqueCells.map(function(c) {
+          if (cells[c].path !== undefined) {cells[c].path += 1;}
+          else {cells[c].path = 1;}
+        });
       }
-      const uniqueCells = [...new Set(pathCells)];
-      uniqueCells.map(function(c) {
-        if (cells[c].path !== undefined) {cells[c].path += 1;}
-        else {cells[c].path = 1;}
-      });
+      tip("", true);
     }
 
     function routeUpdateGroups() {
@@ -4297,7 +4294,7 @@ function fantasyMap() {
         ["2627", "☧", "Chi Rho"],
         ["2628", "☨", "Lorraine"],
         ["2629", "☩", "Jerusalem"],
-        ["2670", "♰", "Syriac cross"],
+        ["2670", "♰", "Syriac cross"],
         ["2020", "†", "Dagger"],
         ["262A", "☪", "Muslim"],
         ["262D", "☭", "Soviet"],
@@ -5924,10 +5921,8 @@ function fantasyMap() {
         overlay.append("use").attr("xlink:href","#rose");
       }
       calculateFriendlyOverlaySize();
-      $("#toggleOverlay").removeClass("buttonoff");
     } else {
       overlay.selectAll("*").remove();
-      $("#toggleOverlay").addClass("buttonoff");
     }
   }
 
@@ -6647,13 +6642,8 @@ function fantasyMap() {
       }
 
       // to fix use elements sizing
-      clone.select("#icons").selectAll("use").each(function() {
+      clone.selectAll("use").each(function() {
         const size = this.parentNode.getAttribute("size") || 1;
-        this.setAttribute("width", size + "px");
-        this.setAttribute("height", size + "px");
-      });
-      clone.select("#terrain").selectAll("use").each(function() {
-        const size = this.getAttribute("width") || 1;
         this.setAttribute("width", size + "px");
         this.setAttribute("height", size + "px");
       });
@@ -6844,12 +6834,12 @@ function fantasyMap() {
     uploadFile(fileToLoad);
   });
 
-  function loadMap(dataString) {
-    const data = dataString.split("\n");
-    //const dataLoaded = mapAsString;
+  function loadMap(mapStr) {
+    const dataLoaded = mapStr;
+
     // data convention: 0 - params; 1 - all points; 2 - cells; 3 - manors; 4 - states;
     // 5 - svg; 6 - options; 7 - cultures; 8 - none; 9 - none; 10 - heights; 11 - notes;
-    //const data = dataLoaded.split("\r\n");
+    const data = dataLoaded.split("\r\n");
     const mapVersion = data[0].split("|")[0] || data[0];
     if (mapVersion === version) {loadDataFromMap(data);}
     else {
@@ -6882,7 +6872,8 @@ function fantasyMap() {
     console.time("loadMap");
     const fileReader = new FileReader();
     fileReader.onload = function(fileLoadedEvent) {
-      loadMap(fileLoadedEvent.target.result);
+      const dataLoaded = fileLoadedEvent.target.result;
+      loadMap(dataLoaded);
     };
     fileReader.readAsText(file, "UTF-8");
     if (callback) {callback();}
@@ -6930,18 +6921,6 @@ function fantasyMap() {
     svg.attr("width", svgWidth).attr("height", svgHeight);
     if (nWidth === svgWidth && nHeight === svgHeight) applyLoadedData(data);
     else {
-      applyLoadedData(data);
-      // rescale loaded map
-      const xRatio = svgWidth / nWidth;
-      const yRatio = svgHeight / nHeight;
-      const scaleTo = rn(Math.min(xRatio, yRatio), 4);
-      // calculate frames to scretch ocean background
-      const extent = (100 / scaleTo) + "%";
-      const xShift = (nWidth * scaleTo - svgWidth) / 2 / scaleTo;
-      const yShift = (nHeight * scaleTo - svgHeight) / 2 / scaleTo;
-      svg.select("#ocean").selectAll("rect").attr("x", xShift).attr("y", yShift).attr("width", extent).attr("height", extent);
-      zoom.translateExtent([[0, 0],[nWidth, nHeight]]).scaleExtent([scaleTo, 20]).scaleTo(svg, scaleTo);
-      /*
       const m = `The loaded map has size ${nWidth} x ${nHeight} pixels, while the current canvas size is ${svgWidth} x ${svgHeight} pixels.
                  Click "Rescale" to fit the map to the current canvas size. Click "OK" to browse the map without rescaling`;
       alertMessage.innerHTML  = m;
@@ -6968,7 +6947,6 @@ function fantasyMap() {
           }
         }
       });
-      */
     }
   }
 
@@ -7063,7 +7041,6 @@ function fantasyMap() {
     restoreDefaultEvents();
     viewbox.on("touchmove mousemove", moved);
     terrain.selectAll("g").selectAll("g").on("click", editReliefIcon);
-    terrain.selectAll("use").on("click", editReliefIcon);
     labels.selectAll("text").on("click", editLabel);
     icons.selectAll("circle, path, use").on("click", editIcon);
     burgLabels.selectAll("text").on("click", editBurg);
@@ -7343,7 +7320,7 @@ function fantasyMap() {
     if (id === "toggleHeight") {toggleHeight();}
     if (id === "toggleCountries") {$('#regions').fadeToggle();}
     if (id === "toggleCultures") {toggleCultures();}
-    if (id === "toggleOverlay") {toggleOverlay(); return;}
+    if (id === "toggleOverlay") {toggleOverlay();}
     if (id === "toggleFlux") {toggleFlux();}
     if (parent === "mapLayers" || parent === "styleContent") {$(this).toggleClass("buttonoff");}
     if (id === "randomMap" || id === "regenerate") {
@@ -10394,10 +10371,10 @@ function fantasyMap() {
 
   $("#layoutPreset").on("change", function() {
     const preset = this.value;
-    $("#mapLayers li").not("#toggleOcean, #toggleOverlay").addClass("buttonoff");
+    $("#mapLayers li").not("#toggleOcean").addClass("buttonoff");
     $("#toggleOcean").removeClass("buttonoff");
     $("#oceanPattern").fadeIn();
-    $("#rivers, #terrain, #borders, #regions, #icons, #labels, #routes, #grid, #markers").fadeOut();
+    $("#rivers, #terrain, #overlay, #borders, #regions, #icons, #labels, #routes, #grid, #markers").fadeOut();
     cults.selectAll("path").remove();
     terrs.selectAll("path").remove();
     if (preset === "layoutPolitical") {
@@ -10546,15 +10523,9 @@ function fantasyMap() {
       });
     });
   }
-
-  window.loadMap = loadMap;
-  fetch('rugby.txt').then(data => data.text()).then(map => {
-    window.loadMap(map);
-    window.map=map;
-    closeDialogs();
+  setTimeout(() => {
+    loadMap(map);
   });
-
-  //loadMap(atob(map64));
 }
 
 function tip(tip, main, error) {
@@ -10570,7 +10541,3 @@ window.tip = tip;
 $("#optionsContainer *").on("mouseout", function() {
   tooltip.innerHTML = tooltip.getAttribute("data-main");
 });
-
- window.onbeforeunload = function() {
-  return "Are you sure you want to navigate away?";
-}

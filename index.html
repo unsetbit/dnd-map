@@ -1427,5 +1427,15 @@
     <input type="file" accept=".txt" id="namesbaseToLoad">
   </div>
 
+  <script>
+    var request = new XMLHttpRequest();
+    request.open('GET', 'rugby-2.map', false);  // `false` makes the request synchronous
+    request.send(null);
+
+    if (request.status === 200) {
+      window.map = request.responseText;
+    }
+  </script>
+
   <script src="script.js?version=0.61.00b"></script>
 </body>
